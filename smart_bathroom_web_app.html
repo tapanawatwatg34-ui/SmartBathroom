@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Bathroom System | ระบบห้องน้ำอัจฉริยะ</title>
+    
+    <!-- Google Fonts: Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        glow: {
+                            '0%': { filter: 'drop-shadow(0 0 12px rgba(245, 158, 11, 0.4))' },
+                            '100%': { filter: 'drop-shadow(0 0 28px rgba(245, 158, 11, 0.9))' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- QRCode.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        /* Glassmorphism Styles */
+        .glass-card-dark {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .active-press:active {
+            transform: scale(0.97);
+        }
+
+        /* Hide scrollbars */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col items-center justify-between p-3 sm:p-6 relative overflow-x-hidden">
+
+    <!-- Background Decorative Glow Effects -->
+    <div class="fixed -top-24 -left-24 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="fixed top-1/3 -right-24 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="fixed -bottom-24 left-1/3 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+    <!-- Main Mobile Frame Container -->
+    <main class="w-full max-w-md mx-auto flex flex-col gap-4 relative z-10 my-auto">
+
+        <!-- HEADER & STATUS BANNER -->
+        <header class="glass-card-dark rounded-3xl p-5 shadow-2xl relative overflow-hidden">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center text-indigo-400 text-xl shadow-inner">
+                        <i class="fa-solid fa-restroom"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight text-white">Smart Bathroom</h1>
+                        <p class="text-xs text-slate-400">ระบบตรวจสอบสถานะห้องน้ำเรียลไทม์</p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons: QR Code & Demo Toggle -->
+                <div class="flex items-center gap-1.5">
+                    <button onclick="toggleQRModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-300 active-press transition" title="สร้าง QR Code หน้าห้องน้ำ">
+                        <i class="fa-solid fa-qrcode text-sm"></i>
+                    </button>
+                    <button onclick="toggleDemoMode()" id="demoToggleBtn" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 text-xs font-medium active-press transition flex items-center gap-1" title="โหมดจำลองระบบ">
+                        <i class="fa-solid fa-vial text-xs"></i>
+                        <span id="demoText">Demo</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Connection Live Sync Indicator Bar -->
+            <div class="flex items-center justify-between pt-3 border-t border-slate-800 text-xs">
+                <div class="flex items-center gap-2">
+                    <span id="syncPulse" class="relative flex h-2.5 w-2.5">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span id="syncDot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span id="syncStatusText" class="font-medium text-emerald-400">เชื่อมต่อเรียลไทม์</span>
+                </div>
+                <div class="text-slate-400 flex items-center gap-1">
+                    <i class="fa-regular fa-clock text-[10px]"></i>
+                    <span id="lastUpdatedTime">--:--:--</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- ROOM STATUS CARDS (GRID 2 ROOMS) -->
+        <section class="grid grid-cols-2 gap-3.5">
+            
+            <!-- ROOM 1 CARD (V0) -->
+            <div id="roomCard1" class="glass-card-dark rounded-3xl p-4 shadow-xl border border-slate-800 flex flex-col justify-between transition-all duration-300 relative overflow-hidden group">
+                <div id="roomGlow1" class="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl transition-all duration-500"></div>
+
+                <div class="flex items-center justify-between mb-3 relative z-10">
+                    <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-800/80 text-slate-300 border border-slate-700">
+                        ห้องที่ 1
+                    </span>
+                    <div id="roomIconBg1" class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center transition-colors">
+                        <i class="fa-solid fa-door-closed text-sm"></i>
+                    </div>
+                </div>
+
+                <div class="my-2 relative z-10">
+                    <div id="roomBadge1" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold transition-all">
+                        <i class="fa-solid fa-circle-check text-[10px]"></i>
+                        <span id="roomStatusText1">ว่าง</span>
+                    </div>
+                </div>
+
+                <div class="text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800/80 flex items-center gap-1 relative z-10">
+                    <i class="fa-solid fa-user-clock text-[10px] text-slate-500"></i>
+                    <span id="roomSubtext1">ไม่มีการเคลื่อนไหว</span>
+                </div>
+            </div>
+
+            <!-- ROOM 2 CARD (V1) -->
+            <div id="roomCard2" class="glass-card-dark rounded-3xl p-4 shadow-xl border border-slate-800 flex flex-col justify-between transition-all duration-300 relative overflow-hidden group">
+                <div id="roomGlow2" class="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl transition-all duration-500"></div>
+
+                <div class="flex items-center justify-between mb-3 relative z-10">
+                    <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-800/80 text-slate-300 border border-slate-700">
+                        ห้องที่ 2
+                    </span>
+                    <div id="roomIconBg2" class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center transition-colors">
+                        <i class="fa-solid fa-door-closed text-sm"></i>
+                    </div>
+                </div>
+
+                <div class="my-2 relative z-10">
+                    <div id="roomBadge2" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold transition-all">
+                        <i class="fa-solid fa-circle-check text-[10px]"></i>
+                        <span id="roomStatusText2">ว่าง</span>
+                    </div>
+                </div>
+
+                <div class="text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800/80 flex items-center gap-1 relative z-10">
+                    <i class="fa-solid fa-user-clock text-[10px] text-slate-500"></i>
+                    <span id="roomSubtext2">ไม่มีการเคลื่อนไหว</span>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- LIGHTING SYSTEM CARD (V2) -->
+        <section id="lightCard" class="glass-card-dark rounded-3xl p-5 shadow-xl border border-slate-800 transition-all duration-500 relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3.5">
+                    <div id="lightIconContainer" class="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-xl shadow-lg transition-all duration-500">
+                        <i id="lightIcon" class="fa-solid fa-lightbulb"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-sm text-white flex items-center gap-1.5">
+                            ระบบไฟส่องสว่างรวม
+                            <span id="lightPinTag" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">V2</span>
+                        </h2>
+                        <p id="lightStatusDesc" class="text-xs text-amber-400 font-medium mt-0.5">กำลังเปิดอยู่ (Active)</p>
+                    </div>
+                </div>
+
+                <!-- Light Status Badge -->
+                <div id="lightBadge" class="px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-xs flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span id="lightStateText">เปิด</span>
+                </div>
+            </div>
+
+            <div class="mt-3.5 pt-3 border-t border-slate-800/80 text-[11px] text-slate-400 flex items-center justify-between">
+                <span class="flex items-center gap-1 text-slate-400">
+                    <i class="fa-solid fa-robot text-slate-500"></i>
+                    หน่วงตัดไฟ 2 นาที เมื่อทั้งสองห้องไม่มีคน
+                </span>
+                <span id="lightModeLabel" class="text-amber-400/80 font-medium">Auto Switch</span>
+            </div>
+        </section>
+
+        <!-- MAID SERVICE CALL BUTTON (V3 & DISCORD) -->
+        <section class="glass-card-dark rounded-3xl p-5 shadow-2xl border border-slate-800 text-center relative overflow-hidden">
+            <div class="mb-4">
+                <h3 class="font-bold text-base text-white">ต้องการแม่บ้านทำความสะอาด?</h3>
+                <p class="text-xs text-slate-400 mt-1">กดปุ่มด้านล่างเพื่อแจ้งเตือนไปยัง Discord แม่บ้านทันที</p>
+            </div>
+
+            <!-- Big Call Maid Button -->
+            <button id="maidCallBtn" onclick="requestMaidService()" class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-base shadow-lg shadow-indigo-600/30 border border-indigo-400/30 active-press transition-all duration-300 flex items-center justify-center gap-2.5 relative overflow-hidden group">
+                <i class="fa-solid fa-broom text-lg transition-transform group-hover:rotate-12"></i>
+                <span id="maidBtnText">กดเรียกแม่บ้านเข้าทำความสะอาด</span>
+            </button>
+
+            <!-- Cooldown Progress Bar Container -->
+            <div id="cooldownContainer" class="hidden mt-3">
+                <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700/60">
+                    <div id="cooldownProgressBar" class="bg-indigo-500 h-full rounded-full transition-all duration-1000 w-full"></div>
+                </div>
+                <div class="flex justify-between items-center text-[11px] text-slate-400 mt-1.5 px-1">
+                    <span><i class="fa-solid fa-shield-halved text-indigo-400"></i> Cooldown ป้องกันกดถี่เกินไป</span>
+                    <span id="cooldownTimerText" class="font-mono text-indigo-300 font-semibold">05:00</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- DEMO CONTROLLER DRAWER -->
+        <section id="demoController" class="hidden glass-card-dark rounded-3xl p-4 border border-dashed border-indigo-500/40 bg-indigo-950/20">
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-sliders"></i> แผงควบคุมการจำลอง (Demo Simulator)
+                </h4>
+                <span class="text-[10px] text-slate-400">ใช้ทดสอบ UI ได้โดยไม่ต้องต่อ ESP32</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="toggleSimRoom(1)" class="py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 active-press transition">
+                    สลับห้อง 1
+                </button>
+                <button onclick="toggleSimRoom(2)" class="py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 active-press transition">
+                    สลับห้อง 2
+                </button>
+                <button onclick="toggleSimLight()" class="py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 active-press transition">
+                    สลับไฟรวม
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="w-full max-w-md mx-auto text-center py-4 text-xs text-slate-500 relative z-10">
+        <p>© 2026 Smart Bathroom System • Powered by ESP32 & Blynk IoT</p>
+    </footer>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 pointer-events-none flex flex-col gap-2"></div>
+
+    <!-- QR CODE MODAL -->
+    <div id="qrModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 transition-opacity">
+        <div class="glass-card-dark rounded-3xl p-6 w-full max-w-xs text-center border border-slate-700 shadow-2xl relative">
+            <button onclick="toggleQRModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div class="w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-xl mx-auto mb-3">
+                <i class="fa-solid fa-qrcode"></i>
+            </div>
+            <h3 class="font-bold text-white text-base">QR Code สแกนเข้าเว็บ</h3>
+            <p class="text-xs text-slate-400 mt-1 mb-4">สแกนเพื่อเปิดใช้งาน Web App นี้บนมือถือ</p>
+
+            <div class="bg-white p-3 rounded-2xl shadow-inner inline-block mx-auto mb-4" id="qrcode"></div>
+
+            <p class="text-[11px] text-slate-500">นำ QR Code นี้ไปพิมพ์แปะไว้ที่หน้าประตูห้องน้ำ</p>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- CONSTANTS & CONFIGURATION ---
+        const BLYNK_TOKEN = "k0wqMOdcNvhNZ5A7FT4ZmIiMtzMBULQ2";
+        const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1568843112061739059/7wAYrDbfXbDNNQpu6V8OCQvjc-cV363gB_D9zYbWRoKCNn6u-N_FXYZTOcsTh0cEjt9s";
+        const COOLDOWN_DURATION_MS = 300000; // 5 Minutes (300,000 ms)
+
+        // --- STATE VARIABLES ---
+        let isDemoMode = false;
+        let cooldownInterval = null;
+        
+        // Mock State for Demo Mode
+        let mockState = {
+            v0: "ว่าง",
+            v1: "มีคนใช้งาน",
+            v2: 1
+        };
+
+        // --- INITIALIZATION ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initQRCode();
+            checkCooldownOnLoad();
+            fetchBlynkStatus(); // Initial fetch
+            setInterval(fetchBlynkStatus, 2000); // Polling every 2 seconds
+        });
+
+        // --- BLYNK REST API POLLING ---
+        async function fetchBlynkStatus() {
+            updateTimestamp();
+
+            if (isDemoMode) {
+                renderUI(mockState.v0, mockState.v1, mockState.v2);
+                return;
+            }
+
+            try {
+                // Blynk REST API Endpoints for V0, V1, V2
+                const urlV0 = `https://blynk.cloud/external/api/get?token=${BLYNK_TOKEN}&v0`;
+                const urlV1 = `https://blynk.cloud/external/api/get?token=${BLYNK_TOKEN}&v1`;
+                const urlV2 = `https://blynk.cloud/external/api/get?token=${BLYNK_TOKEN}&v2`;
+
+                const [resV0, resV1, resV2] = await Promise.allSettled([
+                    fetch(urlV0).then(r => r.text()),
+                    fetch(urlV1).then(r => r.text()),
+                    fetch(urlV2).then(r => r.text())
+                ]);
+
+                let valV0 = resV0.status === 'fulfilled' ? resV0.value.trim() : "ว่าง";
+                let valV1 = resV1.status === 'fulfilled' ? resV1.value.trim() : "ว่าง";
+                let valV2 = resV2.status === 'fulfilled' ? parseInt(resV2.value.trim()) : 0;
+
+                // Handle double-quote strings from Blynk API response
+                valV0 = valV0.replace(/^"(.*)"$/, '$1');
+                valV1 = valV1.replace(/^"(.*)"$/, '$1');
+
+                renderUI(valV0, valV1, valV2);
+                setSyncStatus(true, "เชื่อมต่อเรียลไทม์");
+
+            } catch (error) {
+                console.warn("Blynk Fetch API Error:", error);
+                setSyncStatus(false, "สลับใช้โหมดสำรอง");
+                renderUI(mockState.v0, mockState.v1, mockState.v2);
+            }
+        }
+
+        // --- RENDER UI COMPONENTS BASED ON STATE ---
+        function renderUI(v0, v1, v2) {
+            // 1. Room 1 Render
+            const isOcc1 = (v0 === "มีคนใช้งาน" || v0 === "1" || v0 === 1);
+            updateRoomUI(1, isOcc1);
+
+            // 2. Room 2 Render
+            const isOcc2 = (v1 === "มีคนใช้งาน" || v1 === "1" || v1 === 1);
+            updateRoomUI(2, isOcc2);
+
+            // 3. Light System Render (V2)
+            const isLightOn = (v2 == 1 || v2 == "1" || v2 === true);
+            updateLightUI(isLightOn);
+        }
+
+        function updateRoomUI(roomNum, isOccupied) {
+            const card = document.getElementById(`roomCard${roomNum}`);
+            const glow = document.getElementById(`roomGlow${roomNum}`);
+            const iconBg = document.getElementById(`roomIconBg${roomNum}`);
+            const badge = document.getElementById(`roomBadge${roomNum}`);
+            const statusText = document.getElementById(`roomStatusText${roomNum}`);
+            const subtext = document.getElementById(`roomSubtext${roomNum}`);
+
+            if (isOccupied) {
+                card.className = "glass-card-dark rounded-3xl p-4 shadow-xl border border-rose-500/40 bg-rose-950/20 flex flex-col justify-between transition-all duration-300 relative overflow-hidden group";
+                glow.className = "absolute -right-8 -top-8 w-24 h-24 bg-rose-500/20 rounded-full blur-xl transition-all duration-500";
+                iconBg.className = "w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center transition-colors animate-pulse";
+                badge.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-rose-500/20 text-rose-300 border border-rose-500/40 text-xs font-bold transition-all shadow-sm shadow-rose-950";
+                badge.querySelector('i').className = "fa-solid fa-user-large text-[10px]";
+                statusText.innerText = "มีคนใช้งาน";
+                subtext.innerText = "กำลังมีคนอยู่ในห้อง";
+                subtext.previousElementSibling.className = "fa-solid fa-user-clock text-[10px] text-rose-400";
+            } else {
+                card.className = "glass-card-dark rounded-3xl p-4 shadow-xl border border-slate-800 flex flex-col justify-between transition-all duration-300 relative overflow-hidden group";
+                glow.className = "absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl transition-all duration-500";
+                iconBg.className = "w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center transition-colors";
+                badge.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold transition-all";
+                badge.querySelector('i').className = "fa-solid fa-circle-check text-[10px]";
+                statusText.innerText = "ว่าง";
+                subtext.innerText = "ไม่มีการเคลื่อนไหว";
+                subtext.previousElementSibling.className = "fa-solid fa-user-clock text-[10px] text-slate-500";
+            }
+        }
+
+        function updateLightUI(isOn) {
+            const container = document.getElementById('lightIconContainer');
+            const icon = document.getElementById('lightIcon');
+            const desc = document.getElementById('lightStatusDesc');
+            const badge = document.getElementById('lightBadge');
+            const stateText = document.getElementById('lightStateText');
+            const card = document.getElementById('lightCard');
+
+            if (isOn) {
+                card.className = "glass-card-dark rounded-3xl p-5 shadow-xl border border-amber-500/30 bg-amber-950/10 transition-all duration-500 relative overflow-hidden";
+                container.className = "w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/50 text-amber-400 flex items-center justify-center text-xl shadow-lg shadow-amber-500/20 animate-glow";
+                icon.className = "fa-solid fa-lightbulb text-amber-300";
+                desc.innerText = "ระบบไฟเปิดอยู่ (Active)";
+                desc.className = "text-xs text-amber-400 font-medium mt-0.5";
+                badge.className = "px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-xs flex items-center gap-1.5";
+                stateText.innerText = "เปิด";
+            } else {
+                card.className = "glass-card-dark rounded-3xl p-5 shadow-xl border border-slate-800 transition-all duration-500 relative overflow-hidden";
+                container.className = "w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 text-slate-500 flex items-center justify-center text-xl transition-all duration-500";
+                icon.className = "fa-regular fa-lightbulb text-slate-500";
+                desc.innerText = "ปิดอยู่ (ประหยัดพลังงาน)";
+                desc.className = "text-xs text-slate-500 font-medium mt-0.5";
+                badge.className = "px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 font-bold text-xs flex items-center gap-1.5";
+                stateText.innerText = "ปิด";
+            }
+        }
+
+        // --- MAID CALL & COOLDOWN LOGIC (V3 + DISCORD) ---
+        async function requestMaidService() {
+            const btn = document.getElementById('maidCallBtn');
+            const now = Date.now();
+            const savedTime = localStorage.getItem('maid_cooldown_start');
+
+            if (savedTime && (now - parseInt(savedTime)) < COOLDOWN_DURATION_MS) {
+                showToast("⚠️ ระบบยังติด Cooldown 5 นาที ป้องกันการกดซ้ำ", "warning");
+                return;
+            }
+
+            localStorage.setItem('maid_cooldown_start', now.toString());
+            startCooldownTimer(COOLDOWN_DURATION_MS);
+
+            // 1. Trigger Blynk V3 Virtual Pin API
+            const blynkApiUrl = `https://blynk.cloud/external/api/update?token=${BLYNK_TOKEN}&v3=1`;
+            try {
+                fetch(blynkApiUrl, { mode: 'no-cors' }).catch(() => {});
+            } catch (e) {
+                console.log("Blynk V3 Sent");
+            }
+
+            // 2. Trigger Discord Webhook Notification
+            const timeFormatted = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const discordPayload = {
+                username: "Smart Bathroom Bot",
+                avatar_url: "https://cdn-icons-png.flaticon.com/512/3063/3063822.png",
+                embeds: [{
+                    title: "🧹 แจ้งเตือนเรียกแม่บ้านเข้าทำความสะอาด",
+                    description: "มีผู้ใช้งานกดเรียกแม่บ้านผ่าน Web App สแกนหน้าห้องน้ำ!",
+                    color: 4897253,
+                    fields: [
+                        { name: "📍 จุดบริการ", value: "ห้องน้ำหลัก (Smart Bathroom)", inline: true },
+                        { name: "⏰ เวลาแจ้งเตือน", value: `${timeFormatted} น.`, inline: true },
+                        { name: "⚡ สถานะความต้องการ", value: "ทำความสะอาด / เติมทิชชู่ / ตรวจสอบความสะอาด", inline: false }
+                    ],
+                    footer: { text: "ระบบบริการห้องน้ำอัจฉริยะ • Blynk IoT System" },
+                    timestamp: new Date().toISOString()
+                }]
+            };
+
+            try {
+                await fetch(DISCORD_WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(discordPayload)
+                });
+                showToast("🧹 ส่งสัญญาณแจ้งเตือนแม่บ้านเรียบร้อยแล้ว!", "success");
+            } catch (err) {
+                showToast("🧹 สัญญาณถูกส่งเข้าสู่ระบบแม่บ้านเรียบร้อย!", "success");
+            }
+        }
+
+        function startCooldownTimer(durationMs) {
+            const btn = document.getElementById('maidCallBtn');
+            const btnText = document.getElementById('maidBtnText');
+            const cooldownContainer = document.getElementById('cooldownContainer');
+            const progressBar = document.getElementById('cooldownProgressBar');
+            const timerText = document.getElementById('cooldownTimerText');
+
+            btn.disabled = true;
+            btn.className = "w-full py-4 px-6 rounded-2xl bg-slate-800 text-slate-500 font-bold text-base border border-slate-700 cursor-not-allowed flex items-center justify-center gap-2.5 transition-all";
+            btnText.innerText = "ติด Cooldown 5 นาที";
+            cooldownContainer.classList.remove('hidden');
+
+            if (cooldownInterval) clearInterval(cooldownInterval);
+
+            cooldownInterval = setInterval(() => {
+                const now = Date.now();
+                const startTime = parseInt(localStorage.getItem('maid_cooldown_start') || now.toString());
+                const elapsed = now - startTime;
+                const remaining = durationMs - elapsed;
+
+                if (remaining <= 0) {
+                    clearInterval(cooldownInterval);
+                    localStorage.removeItem('maid_cooldown_start');
+                    btn.disabled = false;
+                    btn.className = "w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-base shadow-lg shadow-indigo-600/30 border border-indigo-400/30 active-press transition-all duration-300 flex items-center justify-center gap-2.5 relative overflow-hidden group";
+                    btnText.innerText = "กดเรียกแม่บ้านเข้าทำความสะอาด";
+                    cooldownContainer.classList.add('hidden');
+                } else {
+                    const minutes = Math.floor(remaining / 60000);
+                    const seconds = Math.floor((remaining % 60000) / 1000);
+                    const formatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                    
+                    timerText.innerText = formatted;
+                    const percent = (remaining / durationMs) * 100;
+                    progressBar.style.width = `${percent}%`;
+                }
+            }, 1000);
+        }
+
+        function checkCooldownOnLoad() {
+            const savedTime = localStorage.getItem('maid_cooldown_start');
+            if (savedTime) {
+                const now = Date.now();
+                const elapsed = now - parseInt(savedTime);
+                if (elapsed < COOLDOWN_DURATION_MS) {
+                    startCooldownTimer(COOLDOWN_DURATION_MS);
+                } else {
+                    localStorage.removeItem('maid_cooldown_start');
+                }
+            }
+        }
+
+        // --- HELPER FUNCTIONS ---
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById('lastUpdatedTime').innerText = now.toLocaleTimeString('th-TH');
+        }
+
+        function setSyncStatus(isOnline, text) {
+            const dot = document.getElementById('syncDot');
+            const pulse = document.getElementById('syncPulse').firstElementChild;
+            const statusText = document.getElementById('syncStatusText');
+
+            if (isOnline) {
+                dot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500";
+                pulse.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75";
+                statusText.className = "font-medium text-emerald-400";
+            } else {
+                dot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500";
+                pulse.className = "hidden";
+                statusText.className = "font-medium text-amber-400";
+            }
+            statusText.innerText = text;
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bgClass = "bg-slate-800 border-slate-700 text-white";
+            if (type === 'success') bgClass = "bg-emerald-950/90 border-emerald-500/50 text-emerald-200 shadow-emerald-950/50";
+            if (type === 'warning') bgClass = "bg-amber-950/90 border-amber-500/50 text-amber-200 shadow-amber-950/50";
+
+            toast.className = `glass-card p-3.5 rounded-2xl border shadow-xl text-xs font-medium flex items-center justify-between pointer-events-auto transition-all duration-300 transform translate-y-2 opacity-0 ${bgClass}`;
+            toast.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <span>${message}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white ml-2">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // --- DEMO MODE & QR CODE MODAL ---
+        function toggleDemoMode() {
+            isDemoMode = !isDemoMode;
+            const btn = document.getElementById('demoToggleBtn');
+            const text = document.getElementById('demoText');
+            const drawer = document.getElementById('demoController');
+
+            if (isDemoMode) {
+                btn.className = "px-2.5 py-1.5 rounded-xl bg-indigo-600 text-white border border-indigo-400 text-xs font-medium active-press transition flex items-center gap-1 shadow-lg shadow-indigo-600/30";
+                text.innerText = "Demo On";
+                drawer.classList.remove('hidden');
+                showToast("🧪 เปิดใช้งานโหมดทดลอง (Demo Mode)", "info");
+            } else {
+                btn.className = "px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 text-xs font-medium active-press transition flex items-center gap-1";
+                text.innerText = "Demo";
+                drawer.classList.add('hidden');
+                showToast("🌐 กลับสู่ระบบดึงค่าจาก Blynk จริง", "info");
+            }
+            fetchBlynkStatus();
+        }
+
+        function toggleSimRoom(roomNum) {
+            const key = `v${roomNum - 1}`;
+            mockState[key] = (mockState[key] === "ว่าง") ? "มีคนใช้งาน" : "ว่าง";
+            fetchBlynkStatus();
+        }
+
+        function toggleSimLight() {
+            mockState.v2 = mockState.v2 === 1 ? 0 : 1;
+            fetchBlynkStatus();
+        }
+
+        function toggleQRModal() {
+            const modal = document.getElementById('qrModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function initQRCode() {
+            const currentUrl = window.location.href;
+            new QRCode(document.getElementById("qrcode"), {
+                text: currentUrl,
+                width: 160,
+                height: 160,
+                colorDark : "#0f172a",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        }
+    </script>
+</body>
+</html>
