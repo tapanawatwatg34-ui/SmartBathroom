@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Bathroom System | ระบบห้องน้ำอัจฉริยะ</title>
+    
+    <!-- Google Fonts: Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Enable class-based dark mode
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'glow-vacant': 'glowVacant 2s ease-in-out infinite alternate',
+                        'glow-occupied': 'glowOccupied 1.5s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        glowVacant: {
+                            '0%': { filter: 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.4))' },
+                            '100%': { filter: 'drop-shadow(0 0 20px rgba(16, 185, 129, 0.8))' }
+                        },
+                        glowOccupied: {
+                            '0%': { filter: 'drop-shadow(0 0 10px rgba(244, 63, 94, 0.5))' },
+                            '100%': { filter: 'drop-shadow(0 0 25px rgba(244, 63, 94, 0.9))' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- QRCode.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- Tone.js for Sound Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/1.4.8/Tone.js"></script>
+
+    <style>
+        /* Glassmorphism Styles (Adaptive for Light/Dark) */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+        }
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .active-press:active {
+            transform: scale(0.96);
+        }
+
+        /* Hide scrollbars */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans min-h-screen flex flex-col items-center justify-between p-3 sm:p-6 relative overflow-x-hidden transition-colors duration-500">
+
+    <!-- Background Decorative Glow Effects -->
+    <div class="fixed -top-24 -left-24 w-96 h-96 bg-indigo-500/20 dark:bg-indigo-600/20 rounded-full blur-3xl pointer-events-none transition-colors"></div>
+    <div class="fixed top-1/3 -right-24 w-96 h-96 bg-amber-400/20 dark:bg-amber-500/15 rounded-full blur-3xl pointer-events-none transition-colors"></div>
+    <div class="fixed -bottom-24 left-1/3 w-96 h-96 bg-emerald-400/20 dark:bg-emerald-500/15 rounded-full blur-3xl pointer-events-none transition-colors"></div>
+
+    <!-- Main Mobile Frame Container -->
+    <main class="w-full max-w-md mx-auto flex flex-col gap-4 relative z-10 my-auto pb-6">
+
+        <!-- HEADER & STATUS BANNER -->
+        <header class="glass-card rounded-3xl p-5 relative overflow-hidden transition-all duration-300">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-600/30 border border-indigo-200 dark:border-indigo-400/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-xl shadow-inner transition-colors">
+                        <i class="fa-solid fa-restroom"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight text-slate-900 dark:text-white transition-colors">Smart Bathroom</h1>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">ระบบอัจฉริยะเรียลไทม์</p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons: Theme, QR Code & Demo -->
+                <div class="flex items-center gap-1.5">
+                    <button onclick="toggleTheme()" class="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 active-press transition-all shadow-sm" title="สลับโหมดสว่าง/มืด">
+                        <i id="themeIcon" class="fa-solid fa-moon text-sm"></i>
+                    </button>
+                    <button onclick="toggleQRModal()" class="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 active-press transition-all shadow-sm" title="สร้าง QR Code หน้าห้องน้ำ">
+                        <i class="fa-solid fa-qrcode text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Connection Live Sync Indicator Bar -->
+            <div class="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800 text-xs transition-colors">
+                <div class="flex items-center gap-2">
+                    <span id="syncPulse" class="relative flex h-2.5 w-2.5">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span id="syncDot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span id="syncStatusText" class="font-medium text-emerald-600 dark:text-emerald-400">เชื่อมต่อเรียลไทม์</span>
+                </div>
+                <div class="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                    <i class="fa-regular fa-clock text-[10px]"></i>
+                    <span id="lastUpdatedTime">--:--:--</span>
+                </div>
+            </div>
+            
+            <!-- Demo Mode Toggle Bar (Compact) -->
+            <div class="absolute top-0 right-0 p-2 opacity-30 hover:opacity-100 transition-opacity">
+                <button onclick="toggleDemoMode()" id="demoToggleBtn" class="px-2 py-1 rounded bg-slate-200 dark:bg-slate-700 text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    <span id="demoText">Demo</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- ROOM STATUS CARDS (GRID 2 ROOMS) -->
+        <section class="grid grid-cols-2 gap-3.5">
+            <!-- ROOM 1 CARD (V0) -->
+            <div id="roomCard1" class="glass-card rounded-3xl p-4 flex flex-col justify-between transition-all duration-300 relative overflow-hidden group">
+                <div id="roomGlow1" class="absolute -right-8 -top-8 w-24 h-24 rounded-full blur-xl transition-all duration-500"></div>
+
+                <div class="flex items-center justify-between mb-3 relative z-10">
+                    <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-sm">
+                        ห้องที่ 1
+                    </span>
+                    <div id="roomIconBg1" class="w-8 h-8 rounded-xl flex items-center justify-center transition-colors">
+                        <i id="roomIcon1" class="fa-solid fa-door-closed text-sm"></i>
+                    </div>
+                </div>
+
+                <div class="my-2 relative z-10">
+                    <div id="roomBadge1" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold transition-all border shadow-sm">
+                        <i id="roomBadgeIcon1" class="fa-solid fa-circle-check text-[10px]"></i>
+                        <span id="roomStatusText1">ว่าง</span>
+                    </div>
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-2 pt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center gap-1 relative z-10 transition-colors">
+                    <i id="roomSubIcon1" class="fa-solid fa-user-clock text-[10px]"></i>
+                    <span id="roomSubtext1">ไม่มีการเคลื่อนไหว</span>
+                </div>
+            </div>
+
+            <!-- ROOM 2 CARD (V1) -->
+            <div id="roomCard2" class="glass-card rounded-3xl p-4 flex flex-col justify-between transition-all duration-300 relative overflow-hidden group">
+                <div id="roomGlow2" class="absolute -right-8 -top-8 w-24 h-24 rounded-full blur-xl transition-all duration-500"></div>
+
+                <div class="flex items-center justify-between mb-3 relative z-10">
+                    <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-sm">
+                        ห้องที่ 2
+                    </span>
+                    <div id="roomIconBg2" class="w-8 h-8 rounded-xl flex items-center justify-center transition-colors">
+                        <i id="roomIcon2" class="fa-solid fa-door-closed text-sm"></i>
+                    </div>
+                </div>
+
+                <div class="my-2 relative z-10">
+                    <div id="roomBadge2" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold transition-all border shadow-sm">
+                        <i id="roomBadgeIcon2" class="fa-solid fa-circle-check text-[10px]"></i>
+                        <span id="roomStatusText2">ว่าง</span>
+                    </div>
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-2 pt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center gap-1 relative z-10 transition-colors">
+                    <i id="roomSubIcon2" class="fa-solid fa-user-clock text-[10px]"></i>
+                    <span id="roomSubtext2">ไม่มีการเคลื่อนไหว</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- LIGHTING SYSTEM CARD (V2) -->
+        <section id="lightCard" class="glass-card rounded-3xl p-5 transition-all duration-500 relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3.5">
+                    <div id="lightIconContainer" class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl transition-all duration-500">
+                        <i id="lightIcon" class="fa-solid fa-lightbulb"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-sm text-slate-800 dark:text-white flex items-center gap-1.5 transition-colors">
+                            ระบบไฟส่องสว่าง
+                            <span id="lightPinTag" class="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-mono">V2</span>
+                        </h2>
+                        <p id="lightStatusDesc" class="text-xs mt-0.5 font-medium">กำลังเปิดอยู่ (Active)</p>
+                    </div>
+                </div>
+                <div id="lightBadge" class="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 border">
+                    <span id="lightPulse" class="w-2 h-2 rounded-full"></span>
+                    <span id="lightStateText">เปิด</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- MAID SERVICE CALL BUTTON (V3 & DISCORD) -->
+        <section class="glass-card rounded-3xl p-5 text-center relative overflow-hidden transition-colors">
+            <div class="mb-4">
+                <h3 class="font-bold text-base text-slate-800 dark:text-white transition-colors">ต้องการแม่บ้านทำความสะอาด?</h3>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">แจ้งเตือนไปยังแอป Discord แม่บ้านทันที</p>
+            </div>
+
+            <!-- Big Call Maid Button -->
+            <button id="maidCallBtn" onclick="requestMaidService()" class="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold text-sm sm:text-base shadow-lg shadow-indigo-500/30 border border-indigo-400/50 active-press transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden group">
+                <i class="fa-solid fa-bell text-lg transition-transform group-hover:rotate-12 animate-pulse-slow"></i>
+                <span id="maidBtnText">กดเรียกแม่บ้านทำความสะอาด</span>
+            </button>
+        </section>
+
+        <!-- ACTIVITY LOG SECTION -->
+        <section id="activityLog" class="glass-card rounded-2xl p-3 px-4 shadow-sm flex items-center justify-between text-xs transition-colors hidden">
+            <div class="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                <div class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-500">
+                    <i class="fa-solid fa-clock-rotate-left text-[10px]"></i>
+                </div>
+                <span class="font-medium">เรียกแม่บ้านล่าสุด</span>
+            </div>
+            <div class="font-mono bg-slate-200 dark:bg-slate-800 px-2.5 py-1 rounded text-slate-700 dark:text-slate-300 font-semibold" id="lastCallTime">
+                --:--
+            </div>
+        </section>
+
+        <!-- DEMO CONTROLLER DRAWER -->
+        <section id="demoController" class="hidden glass-card rounded-3xl p-4 border border-dashed border-indigo-500/40 bg-indigo-50/50 dark:bg-indigo-950/20">
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="text-xs font-bold text-indigo-600 dark:text-indigo-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-sliders"></i> Simulator
+                </h4>
+                <span class="text-[9px] text-slate-500">ตัดการเชื่อมต่อ API แล้ว</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="toggleSimRoom(1)" class="py-2 px-1 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 text-[10px] sm:text-xs text-slate-700 dark:text-slate-300 shadow-sm active-press transition">
+                    สลับห้อง 1
+                </button>
+                <button onclick="toggleSimRoom(2)" class="py-2 px-1 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 text-[10px] sm:text-xs text-slate-700 dark:text-slate-300 shadow-sm active-press transition">
+                    สลับห้อง 2
+                </button>
+                <button onclick="toggleSimLight()" class="py-2 px-1 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 text-[10px] sm:text-xs text-slate-700 dark:text-slate-300 shadow-sm active-press transition">
+                    สลับไฟรวม
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="w-full text-center py-4 text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 relative z-10 transition-colors">
+        <p>© 2026 Smart Bathroom System • Powered by ESP32 & Blynk</p>
+    </footer>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 pointer-events-none flex flex-col gap-2"></div>
+
+    <!-- QR CODE MODAL -->
+    <div id="qrModal" class="fixed inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 transition-opacity">
+        <div class="glass-card rounded-3xl p-6 w-full max-w-xs text-center border shadow-2xl relative bg-white/90 dark:bg-slate-900/90">
+            <button onclick="toggleQRModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div class="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-xl mx-auto mb-3 shadow-inner">
+                <i class="fa-solid fa-qrcode"></i>
+            </div>
+            <h3 class="font-bold text-slate-800 dark:text-white text-base">QR Code สแกนเข้าเว็บ</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">ให้ผู้ใช้งานสแกนเพื่อเปิดแอปนี้</p>
+
+            <div class="bg-white p-3 rounded-2xl shadow-inner inline-block mx-auto mb-4 border border-slate-100" id="qrcode"></div>
+
+            <p class="text-[11px] text-slate-500">นำ QR Code ไปพิมพ์แปะไว้ที่หน้าประตู</p>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- CONSTANTS & CONFIGURATION ---
+        const BLYNK_TOKEN = "k0wqMOdcNvhNZ5A7FT4ZmIiMtzMBULQ2";
+        const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1568843112061739059/7wAYrDbfXbDNNQpu6V8OCQvjc-cV363gB_D9zYbWRoKCNn6u-N_FXYZTOcsTh0cEjt9s";
+        const COOLDOWN_DURATION_MS = 300000; // 5 Minutes
+        let audioCtxReady = false;
+
+        // --- STATE VARIABLES ---
+        let isDemoMode = false;
+        let cooldownInterval = null;
+        let mockState = { v0: "ว่าง", v1: "มีคนใช้งาน", v2: 1 };
+
+        // --- INITIALIZATION ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            initQRCode();
+            updateActivityLogUI();
+            checkCooldownOnLoad();
+            fetchBlynkStatus();
+            setInterval(fetchBlynkStatus, 2000);
+        });
+
+        // --- THEME & AUDIO SYSTEM ---
+        function initTheme() {
+            if (localStorage.getItem('theme') === 'light') {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').className = "fa-solid fa-sun text-sm text-amber-500";
+            } else {
+                document.documentElement.classList.add('dark');
+            }
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                icon.className = "fa-solid fa-sun text-sm text-amber-500";
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                icon.className = "fa-solid fa-moon text-sm";
+            }
+        }
+
+        async function initAudio() {
+            if (!audioCtxReady) {
+                await Tone.start();
+                audioCtxReady = true;
+            }
+        }
+
+        function playSuccessChime() {
+            try {
+                const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                synth.volume.value = -10;
+                const now = Tone.now();
+                synth.triggerAttackRelease(["C5", "E5", "G5"], "8n", now);
+                synth.triggerAttackRelease(["C6"], "4n", now + 0.15);
+            } catch (e) { console.log("Audio play error"); }
+        }
+
+        function playErrorSound() {
+            try {
+                const synth = new Tone.Synth().toDestination();
+                synth.volume.value = -15;
+                synth.triggerAttackRelease("G3", "8n");
+            } catch (e) {}
+        }
+
+        // --- BLYNK REST API POLLING ---
+        async function fetchBlynkStatus() {
+            updateTimestamp();
+            if (isDemoMode) {
+                renderUI(mockState.v0, mockState.v1, mockState.v2);
+                return;
+            }
+            try {
+                const urlV0 = `https://blynk.cloud/external/api/get?token=${BLYNK_TOKEN}&v0`;
+                const urlV1 = `https://blynk.cloud/external/api/get?token=${BLYNK_TOKEN}&v1`;
+                const urlV2 = `https://blynk.cloud/external/api/get?token=${BLYNK_TOKEN}&v2`;
+                const [resV0, resV1, resV2] = await Promise.allSettled([
+                    fetch(urlV0).then(r => r.text()),
+                    fetch(urlV1).then(r => r.text()),
+                    fetch(urlV2).then(r => r.text())
+                ]);
+                let valV0 = resV0.status === 'fulfilled' ? resV0.value.trim().replace(/^"(.*)"$/, '$1') : "ว่าง";
+                let valV1 = resV1.status === 'fulfilled' ? resV1.value.trim().replace(/^"(.*)"$/, '$1') : "ว่าง";
+                let valV2 = resV2.status === 'fulfilled' ? parseInt(resV2.value.trim()) : 0;
+                
+                renderUI(valV0, valV1, valV2);
+                setSyncStatus(true, "เชื่อมต่อเรียลไทม์");
+            } catch (error) {
+                setSyncStatus(false, "สลับใช้โหมดสำรอง");
+                renderUI(mockState.v0, mockState.v1, mockState.v2);
+            }
+        }
+
+        // --- UI RENDER ENGINE (Supports Dark/Light) ---
+        function renderUI(v0, v1, v2) {
+            updateRoomUI(1, (v0 === "มีคนใช้งาน" || v0 === "1" || v0 === 1));
+            updateRoomUI(2, (v1 === "มีคนใช้งาน" || v1 === "1" || v1 === 1));
+            updateLightUI((v2 == 1 || v2 == "1" || v2 === true));
+        }
+
+        function updateRoomUI(roomNum, isOccupied) {
+            const glow = document.getElementById(`roomGlow${roomNum}`);
+            const iconBg = document.getElementById(`roomIconBg${roomNum}`);
+            const icon = document.getElementById(`roomIcon${roomNum}`);
+            const badge = document.getElementById(`roomBadge${roomNum}`);
+            const badgeIcon = document.getElementById(`roomBadgeIcon${roomNum}`);
+            const statusText = document.getElementById(`roomStatusText${roomNum}`);
+            const subtext = document.getElementById(`roomSubtext${roomNum}`);
+            const subIcon = document.getElementById(`roomSubIcon${roomNum}`);
+
+            if (isOccupied) {
+                // RED State (Occupied)
+                glow.className = "absolute -right-8 -top-8 w-24 h-24 bg-rose-500/20 dark:bg-rose-500/30 rounded-full blur-xl transition-all duration-500 animate-glow-occupied";
+                iconBg.className = "w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-500/20 text-rose-500 flex items-center justify-center transition-colors shadow-inner";
+                badge.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-300 border-rose-200 dark:border-rose-500/40 text-xs font-bold transition-all shadow-sm";
+                badgeIcon.className = "fa-solid fa-user-large text-[10px]";
+                statusText.innerText = "มีคนใช้งาน";
+                subtext.innerText = "กำลังมีคนอยู่ในห้อง";
+                subIcon.className = "fa-solid fa-user-clock text-[10px] text-rose-400";
+            } else {
+                // GREEN State (Vacant)
+                glow.className = "absolute -right-8 -top-8 w-24 h-24 bg-emerald-400/20 dark:bg-emerald-500/20 rounded-full blur-xl transition-all duration-500 animate-glow-vacant";
+                iconBg.className = "w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-500 flex items-center justify-center transition-colors shadow-inner";
+                badge.className = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30 text-xs font-bold transition-all shadow-sm";
+                badgeIcon.className = "fa-solid fa-circle-check text-[10px]";
+                statusText.innerText = "ว่าง";
+                subtext.innerText = "ไม่มีการเคลื่อนไหว";
+                subIcon.className = "fa-solid fa-user-clock text-[10px] text-slate-400 dark:text-slate-500";
+            }
+        }
+
+        function updateLightUI(isOn) {
+            const container = document.getElementById('lightIconContainer');
+            const icon = document.getElementById('lightIcon');
+            const desc = document.getElementById('lightStatusDesc');
+            const badge = document.getElementById('lightBadge');
+            const stateText = document.getElementById('lightStateText');
+            const pulse = document.getElementById('lightPulse');
+
+            if (isOn) {
+                container.className = "w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-500/20 border-amber-200 dark:border-amber-500/50 text-amber-500 flex items-center justify-center text-xl shadow-inner transition-all duration-500";
+                icon.className = "fa-solid fa-lightbulb text-amber-500 dark:text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]";
+                desc.innerText = "ระบบไฟเปิดอยู่ (Active)";
+                desc.className = "text-xs text-amber-600 dark:text-amber-400 font-medium mt-0.5";
+                badge.className = "px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-500/20 border-amber-200 dark:border-amber-500/40 text-amber-600 dark:text-amber-300 font-bold text-xs flex items-center gap-1.5 shadow-sm";
+                stateText.innerText = "เปิด";
+                pulse.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+            } else {
+                container.className = "w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 flex items-center justify-center text-xl shadow-inner transition-all duration-500";
+                icon.className = "fa-regular fa-lightbulb";
+                desc.innerText = "ปิดอยู่ (ประหยัดพลังงาน)";
+                desc.className = "text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5";
+                badge.className = "px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold text-xs flex items-center gap-1.5";
+                stateText.innerText = "ปิด";
+                pulse.className = "hidden";
+            }
+        }
+
+        // --- MAID CALL & COOLDOWN LOGIC (V3 + DISCORD) ---
+        async function requestMaidService() {
+            await initAudio(); // Start Audio Context on user gesture
+            const now = Date.now();
+            const savedTime = localStorage.getItem('maid_cooldown_start');
+
+            if (savedTime && (now - parseInt(savedTime)) < COOLDOWN_DURATION_MS) {
+                playErrorSound();
+                showToast("⚠️ ระบบยังติด Cooldown ป้องกันการกดซ้ำ", "warning");
+                return;
+            }
+
+            playSuccessChime();
+            localStorage.setItem('maid_cooldown_start', now.toString());
+            
+            // Save to Activity Log
+            const timeFormatted = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            localStorage.setItem('last_maid_call_time', timeFormatted);
+            updateActivityLogUI();
+
+            startCooldownTimer(COOLDOWN_DURATION_MS);
+
+            // 1. Trigger Blynk V3 API
+            try {
+                fetch(`https://blynk.cloud/external/api/update?token=${BLYNK_TOKEN}&v3=1`, { mode: 'no-cors' }).catch(()=>{});
+            } catch (e) {}
+
+            // 2. Trigger Discord
+            const fullTimeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const discordPayload = {
+                username: "Smart Bathroom Bot",
+                embeds: [{
+                    title: "🧹 แจ้งเตือนเรียกแม่บ้าน!",
+                    description: "มีผู้ใช้งานกดเรียกแม่บ้านผ่าน Web App",
+                    color: 4897253,
+                    fields: [
+                        { name: "📍 จุดบริการ", value: "ห้องน้ำหลัก", inline: true },
+                        { name: "⏰ เวลา", value: `${fullTimeStr} น.`, inline: true }
+                    ]
+                }]
+            };
+
+            try {
+                await fetch(DISCORD_WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(discordPayload)
+                });
+                showToast("🧹 ส่งสัญญาณเรียกแม่บ้านเรียบร้อยแล้ว!", "success");
+            } catch (err) {
+                showToast("🧹 ส่งสัญญาณเรียกแม่บ้านเรียบร้อยแล้ว!", "success");
+            }
+        }
+
+        function startCooldownTimer(durationMs) {
+            const btn = document.getElementById('maidCallBtn');
+            const btnText = document.getElementById('maidBtnText');
+            btn.disabled = true;
+            btn.className = "w-full py-4 px-4 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-500 font-bold text-sm border border-slate-300 dark:border-slate-700 cursor-not-allowed flex items-center justify-center shadow-inner transition-all";
+            
+            if (cooldownInterval) clearInterval(cooldownInterval);
+
+            cooldownInterval = setInterval(() => {
+                const now = Date.now();
+                const startTime = parseInt(localStorage.getItem('maid_cooldown_start') || now.toString());
+                const remaining = durationMs - (now - startTime);
+
+                if (remaining <= 0) {
+                    clearInterval(cooldownInterval);
+                    localStorage.removeItem('maid_cooldown_start');
+                    btn.disabled = false;
+                    btn.className = "w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold text-sm sm:text-base shadow-lg shadow-indigo-500/30 border border-indigo-400/50 active-press transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden group";
+                    btnText.innerHTML = `กดเรียกแม่บ้านทำความสะอาด`;
+                } else {
+                    const m = String(Math.floor(remaining / 60000)).padStart(2, '0');
+                    const s = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
+                    btnText.innerHTML = `ติด Cooldown <span class="font-mono bg-slate-300 dark:bg-black/30 px-2 py-0.5 rounded text-slate-700 dark:text-indigo-200 ml-1.5 shadow-inner">${m}:${s}</span>`;
+                }
+            }, 1000);
+        }
+
+        function checkCooldownOnLoad() {
+            const saved = localStorage.getItem('maid_cooldown_start');
+            if (saved && (Date.now() - parseInt(saved)) < COOLDOWN_DURATION_MS) {
+                startCooldownTimer(COOLDOWN_DURATION_MS);
+            } else {
+                localStorage.removeItem('maid_cooldown_start');
+            }
+        }
+
+        function updateActivityLogUI() {
+            const logSection = document.getElementById('activityLog');
+            const timeText = document.getElementById('lastCallTime');
+            const savedTime = localStorage.getItem('last_maid_call_time');
+            if (savedTime) {
+                timeText.innerText = `${savedTime} น.`;
+                logSection.classList.remove('hidden');
+            }
+        }
+
+        // --- UTILITIES ---
+        function updateTimestamp() {
+            document.getElementById('lastUpdatedTime').innerText = new Date().toLocaleTimeString('th-TH');
+        }
+
+        function setSyncStatus(isOnline, text) {
+            const dot = document.getElementById('syncDot');
+            const pulse = document.getElementById('syncPulse').firstElementChild;
+            const statusText = document.getElementById('syncStatusText');
+            if (isOnline) {
+                dot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500";
+                pulse.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75";
+                statusText.className = "font-medium text-emerald-600 dark:text-emerald-400";
+            } else {
+                dot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500";
+                pulse.className = "hidden";
+                statusText.className = "font-medium text-amber-600 dark:text-amber-400";
+            }
+            statusText.innerText = text;
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            let bg = "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white shadow-lg";
+            if (type === 'success') bg = "bg-emerald-50 dark:bg-emerald-950/90 border-emerald-200 dark:border-emerald-500/50 text-emerald-700 dark:text-emerald-200 shadow-emerald-900/10";
+            if (type === 'warning') bg = "bg-amber-50 dark:bg-amber-950/90 border-amber-200 dark:border-amber-500/50 text-amber-700 dark:text-amber-200 shadow-amber-900/10";
+
+            toast.className = `p-3.5 rounded-2xl border text-xs font-medium flex items-center justify-between pointer-events-auto transition-all duration-300 transform translate-y-2 opacity-0 ${bg}`;
+            toast.innerHTML = `<div class="flex items-center gap-2"><span>${message}</span></div><button onclick="this.parentElement.remove()" class="opacity-70 hover:opacity-100 ml-2"><i class="fa-solid fa-xmark"></i></button>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        function toggleDemoMode() {
+            isDemoMode = !isDemoMode;
+            const drawer = document.getElementById('demoController');
+            if (isDemoMode) {
+                drawer.classList.remove('hidden');
+                showToast("🧪 เปิดโหมดจำลองสถานะ", "info");
+            } else {
+                drawer.classList.add('hidden');
+                showToast("🌐 กลับสู่ระบบ API จริง", "info");
+            }
+            fetchBlynkStatus();
+        }
+        function toggleSimRoom(n) { mockState[`v${n-1}`] = mockState[`v${n-1}`] === "ว่าง" ? "มีคนใช้งาน" : "ว่าง"; fetchBlynkStatus(); }
+        function toggleSimLight() { mockState.v2 = mockState.v2 === 1 ? 0 : 1; fetchBlynkStatus(); }
+        function toggleQRModal() { document.getElementById('qrModal').classList.toggle('hidden'); }
+        function initQRCode() { new QRCode(document.getElementById("qrcode"), { text: window.location.href, width: 140, height: 140, colorDark : "#0f172a", colorLight : "#ffffff" }); }
+    </script>
+</body>
+</html>
